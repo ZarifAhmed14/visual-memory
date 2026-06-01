@@ -74,6 +74,82 @@ def capture_webcam(args: argparse.Namespace) -> None:
     print(f"Saved run: {run_dir}")
 
 
+def run_detection_for_dir(
+    run_dir: Path,
+    model: str,
+    confidence: float,
+    frame_stride: int,
+    annotate: bool,
+) -> tuple[int, int]:
+    observations = list(read_observations(run_dir))
+    if not observations:
+        raise SystemExit(f"No observations found in {run_dir}")
+
+    detector = YoloObjectDetector(model_name=model, confidence=confidence)
+    detections_path = run_dir / "detections.jsonl"
+    annotated_dir = run_dir / "annotated_frames"
+    if annotate:
+        annotated_dir.mkdir(exist_ok=True)
+
+    all_detections = []
+    processed = 0
+    with detections_path.open("w", encoding="utf-8") as file:
+        for observation in observations:
+            if frame_stride > 1 and (observation.frame_id - 1) % frame_stride != 0:
+                continue
+
+            frame_path = frame_path_for(run_dir, observation)
+            frame = cv2.imread(str(frame_path))
+            if frame is None:
+                raise SystemExit(f"Could not read frame: {frame_path}")
+
+            detections = detector.detect(frame, observation)
+            for detection in detections:
+                file.write(json.dumps(detection.to_json()) + "\n")
+            all_detections.extend(detections)
+            processed += 1
+
+            if annotate:
+                annotated = draw_detections(frame, detections)
+                cv2.imwrite(str(annotated_dir / f"{observation.frame_id:06d}.jpg"), annotated)
+
+    memories = summarize_detections(all_detections)
+    (run_dir / "memory_summary.json").write_text(
+        json.dumps([memory.to_json() for memory in memories], indent=2),
+        encoding="utf-8",
+    )
+    return processed, len(all_detections)
+
+
+def run_tracking_for_dir(
+    run_dir: Path,
+    iou_threshold: float,
+    max_center_distance: float,
+    max_frame_gap: int,
+) -> tuple[int, int]:
+    detections = load_detections(run_dir)
+    if not detections:
+        return 0, 0
+
+    track_records = track_detections(
+        detections,
+        iou_threshold=iou_threshold,
+        max_center_distance=max_center_distance,
+        max_frame_gap=max_frame_gap,
+    )
+    summaries = summarize_tracks(track_records)
+
+    with (run_dir / "tracks.jsonl").open("w", encoding="utf-8") as file:
+        for record in track_records:
+            file.write(json.dumps(record.to_json()) + "\n")
+
+    (run_dir / "track_summary.json").write_text(
+        json.dumps([summary.to_json() for summary in summaries], indent=2),
+        encoding="utf-8",
+    )
+    return len(track_records), len(summaries)
+
+
 def replay(args: argparse.Namespace) -> None:
     run_dir = Path(args.run_dir).resolve()
     records = list(read_observations(run_dir))
@@ -132,49 +208,19 @@ def load_detections(run_dir: Path) -> list[DetectionRecord]:
 
 def detect(args: argparse.Namespace) -> None:
     run_dir = Path(args.run_dir).resolve()
-    observations = list(read_observations(run_dir))
-    if not observations:
-        raise SystemExit(f"No observations found in {run_dir}")
-
-    detector = YoloObjectDetector(model_name=args.model, confidence=args.confidence)
-    detections_path = run_dir / "detections.jsonl"
-    annotated_dir = run_dir / "annotated_frames"
-    annotated_dir.mkdir(exist_ok=True)
-
-    all_detections = []
-    processed = 0
-    with detections_path.open("w", encoding="utf-8") as file:
-        for observation in observations:
-            if args.frame_stride > 1 and (observation.frame_id - 1) % args.frame_stride != 0:
-                continue
-
-            frame_path = frame_path_for(run_dir, observation)
-            frame = cv2.imread(str(frame_path))
-            if frame is None:
-                raise SystemExit(f"Could not read frame: {frame_path}")
-
-            detections = detector.detect(frame, observation)
-            for detection in detections:
-                file.write(json.dumps(detection.to_json()) + "\n")
-            all_detections.extend(detections)
-            processed += 1
-
-            if args.annotate:
-                annotated = draw_detections(frame, detections)
-                cv2.imwrite(str(annotated_dir / f"{observation.frame_id:06d}.jpg"), annotated)
-
-    memories = summarize_detections(all_detections)
-    memory_path = run_dir / "memory_summary.json"
-    memory_path.write_text(
-        json.dumps([memory.to_json() for memory in memories], indent=2),
-        encoding="utf-8",
+    processed, detection_count = run_detection_for_dir(
+        run_dir=run_dir,
+        model=args.model,
+        confidence=args.confidence,
+        frame_stride=args.frame_stride,
+        annotate=args.annotate,
     )
 
     print(f"Processed {processed} frames from {run_dir}")
-    print(f"Saved detections: {detections_path}")
-    print(f"Saved memory summary: {memory_path}")
+    print(f"Saved {detection_count} detections: {run_dir / 'detections.jsonl'}")
+    print(f"Saved memory summary: {run_dir / 'memory_summary.json'}")
     if args.annotate:
-        print(f"Saved annotated frames: {annotated_dir}")
+        print(f"Saved annotated frames: {run_dir / 'annotated_frames'}")
 
 
 def summarize(args: argparse.Namespace) -> None:
@@ -211,32 +257,44 @@ def load_tracks(run_dir: Path) -> list[TrackRecord]:
 
 def track(args: argparse.Namespace) -> None:
     run_dir = Path(args.run_dir).resolve()
-    detections = load_detections(run_dir)
-    if not detections:
-        raise SystemExit("No detections available. Run detect first.")
-
-    track_records = track_detections(
-        detections,
+    track_count, summary_count = run_tracking_for_dir(
+        run_dir=run_dir,
         iou_threshold=args.iou_threshold,
         max_center_distance=args.max_center_distance,
         max_frame_gap=args.max_frame_gap,
     )
-    summaries = summarize_tracks(track_records)
+    if track_count == 0:
+        raise SystemExit("No detections available. Run detect first.")
 
-    tracks_path = run_dir / "tracks.jsonl"
-    with tracks_path.open("w", encoding="utf-8") as file:
-        for record in track_records:
-            file.write(json.dumps(record.to_json()) + "\n")
+    print(f"Created {summary_count} object tracks from {track_count} detections")
+    print(f"Saved tracks: {run_dir / 'tracks.jsonl'}")
+    print(f"Saved track summary: {run_dir / 'track_summary.json'}")
 
-    track_summary_path = run_dir / "track_summary.json"
-    track_summary_path.write_text(
-        json.dumps([summary.to_json() for summary in summaries], indent=2),
-        encoding="utf-8",
+
+def scan_webcam(args: argparse.Namespace) -> None:
+    capture_webcam(args)
+    run_dir = DEFAULT_RUNS_DIR / args.run_name
+    processed, detection_count = run_detection_for_dir(
+        run_dir=run_dir,
+        model=args.model,
+        confidence=args.confidence,
+        frame_stride=args.frame_stride,
+        annotate=args.annotate,
     )
-
-    print(f"Created {len(summaries)} object tracks from {len(track_records)} detections")
-    print(f"Saved tracks: {tracks_path}")
-    print(f"Saved track summary: {track_summary_path}")
+    track_count, summary_count = run_tracking_for_dir(
+        run_dir=run_dir,
+        iou_threshold=args.iou_threshold,
+        max_center_distance=args.max_center_distance,
+        max_frame_gap=args.max_frame_gap,
+    )
+    print("Pipeline complete")
+    print(f"Run: {run_dir}")
+    print(f"Frames processed for detection: {processed}")
+    print(f"Detections: {detection_count}")
+    print(f"Tracked detection records: {track_count}")
+    print(f"Object tracks: {summary_count}")
+    print("Next:")
+    print(f"  python -m evm.cli list-memory data\\runs\\{args.run_name}")
 
 
 def summarize_tracks_command(args: argparse.Namespace) -> None:
@@ -362,6 +420,21 @@ def build_parser() -> argparse.ArgumentParser:
     capture_parser.add_argument("--width", type=int, default=1280)
     capture_parser.add_argument("--height", type=int, default=720)
     capture_parser.set_defaults(func=capture_webcam)
+
+    scan_parser = subparsers.add_parser("scan-webcam")
+    scan_parser.add_argument("--run-name", default="webcam_scan")
+    scan_parser.add_argument("--camera-index", type=int, default=0)
+    scan_parser.add_argument("--seconds", type=float, default=10)
+    scan_parser.add_argument("--width", type=int, default=1280)
+    scan_parser.add_argument("--height", type=int, default=720)
+    scan_parser.add_argument("--model", default="yolov8n.pt")
+    scan_parser.add_argument("--confidence", type=float, default=0.35)
+    scan_parser.add_argument("--frame-stride", type=int, default=5)
+    scan_parser.add_argument("--annotate", action=argparse.BooleanOptionalAction, default=True)
+    scan_parser.add_argument("--iou-threshold", type=float, default=0.25)
+    scan_parser.add_argument("--max-center-distance", type=float, default=180.0)
+    scan_parser.add_argument("--max-frame-gap", type=int, default=10)
+    scan_parser.set_defaults(func=scan_webcam)
 
     replay_parser = subparsers.add_parser("replay")
     replay_parser.add_argument("run_dir")

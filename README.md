@@ -106,3 +106,18 @@ Step 5 adds `change_report.json` to the after-run folder with:
 - disappeared objects
 - still-present objects
 - moved objects based on image-center shift
+
+## Step 6: One-Command Webcam Scan
+
+Capture, detect, track, annotate, and prepare memory in one command:
+
+```powershell
+python -m evm.cli scan-webcam --run-name desk_scan --seconds 10
+```
+
+Then query it:
+
+```powershell
+python -m evm.cli list-memory data\runs\desk_scan
+python -m evm.cli query-memory data\runs\desk_scan bottle
+```
