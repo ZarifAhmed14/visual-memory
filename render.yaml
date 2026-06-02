@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: embodied-visual-memory
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: EVM_DATA_DIR
+        value: /data
+    healthCheckPath: /health

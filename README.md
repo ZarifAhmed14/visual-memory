@@ -169,3 +169,26 @@ The dashboard can:
 - scan a phone video from a local file path
 - upload a video from the user's PC
 - open the webcam, record a 3-5 second clip, and scan it
+
+## Deployment
+
+The best deployment path for this project is a Python-friendly container host such as Render or Railway.
+Vercel can host Python functions, but this project is a poor fit for Vercel because it depends on heavy CV libraries,
+longer-running video processing, and writable runtime storage for uploaded videos and generated runs.
+
+This repo includes:
+
+- `Dockerfile`: container image for the FastAPI app
+- `.dockerignore`: keeps local runs, videos, and model weights out of the image
+- `render.yaml`: Render service blueprint
+
+For Render:
+
+1. Push the repo to GitHub
+2. Create a new Web Service from the repository
+3. Let Render detect `render.yaml`
+4. Deploy
+
+Optional:
+
+- Set up a persistent disk and point `EVM_DATA_DIR` to that mount path if you want uploaded videos and generated runs to survive redeploys.

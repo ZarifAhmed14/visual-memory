@@ -13,6 +13,7 @@ from evm.cli import (
     run_detection_for_dir,
     run_tracking_for_dir,
 )
+from evm.paths import RUNS_DIR, UPLOADS_DIR, ensure_data_dirs
 from evm.query import find_best_track
 from evm.report import build_run_report
 from evm.sources import VideoFileSource
@@ -20,11 +21,7 @@ from evm.storage import RunWriter
 from evm.tracking import TrackSummary, summarize_tracks
 from evm.cli import load_tracks
 
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-RUNS_DIR = PROJECT_ROOT / "data" / "runs"
-VIDEOS_DIR = PROJECT_ROOT / "data" / "videos"
-UPLOADS_DIR = VIDEOS_DIR / "uploads"
+ensure_data_dirs()
 
 app = FastAPI(title="Embodied Visual Memory")
 app.mount("/runs", StaticFiles(directory=RUNS_DIR), name="runs")
@@ -245,6 +242,11 @@ def page(title: str, body: str) -> HTMLResponse:
 </body>
 </html>"""
     )
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
 
 
 def run_names() -> list[str]:

@@ -1,0 +1,9 @@
+.git
+.venv
+__pycache__
+*.pyc
+*.pt
+data/runs/*
+!data/runs/.gitkeep
+data/videos/*
+!data/videos/.gitkeep

@@ -10,6 +10,7 @@ import cv2
 from evm.change import ChangeItem, compare_track_summaries
 from evm.detection import YoloObjectDetector, draw_detections, frame_path_for
 from evm.memory import summarize_detections
+from evm.paths import PROJECT_ROOT, RUNS_DIR, ensure_data_dirs
 from evm.query import find_best_track
 from evm.report import build_run_report
 from evm.detection import DetectionRecord
@@ -17,12 +18,11 @@ from evm.sources import VideoFileSource, WebcamSource
 from evm.storage import RunWriter, read_observations
 from evm.tracking import TrackRecord, summarize_tracks, track_detections
 
-
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DEFAULT_RUNS_DIR = PROJECT_ROOT / "data" / "runs"
+DEFAULT_RUNS_DIR = RUNS_DIR
 
 
 def capture_webcam(args: argparse.Namespace) -> None:
+    ensure_data_dirs()
     run_dir = DEFAULT_RUNS_DIR / args.run_name
     if run_dir.exists() and any(run_dir.iterdir()):
         raise SystemExit(f"Run already exists and is not empty: {run_dir}")
@@ -76,6 +76,7 @@ def capture_webcam(args: argparse.Namespace) -> None:
 
 
 def ingest_video(args: argparse.Namespace) -> None:
+    ensure_data_dirs()
     run_dir = DEFAULT_RUNS_DIR / args.run_name
     if run_dir.exists() and any(run_dir.iterdir()):
         raise SystemExit(f"Run already exists and is not empty: {run_dir}")
@@ -304,6 +305,7 @@ def track(args: argparse.Namespace) -> None:
 
 
 def scan_webcam(args: argparse.Namespace) -> None:
+    ensure_data_dirs()
     capture_webcam(args)
     run_dir = DEFAULT_RUNS_DIR / args.run_name
     processed, detection_count = run_detection_for_dir(
@@ -330,6 +332,7 @@ def scan_webcam(args: argparse.Namespace) -> None:
 
 
 def scan_video(args: argparse.Namespace) -> None:
+    ensure_data_dirs()
     ingest_video(args)
     run_dir = DEFAULT_RUNS_DIR / args.run_name
     processed, detection_count = run_detection_for_dir(
