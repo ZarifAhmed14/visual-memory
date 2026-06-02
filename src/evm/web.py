@@ -236,6 +236,8 @@ def page(title: str, body: str) -> HTMLResponse:
       <a href="/">Dashboard</a>
       <a href="/learn">Learn CV Basics</a>
       <a href="/math">Math Playground</a>
+      <a href="/architecture">Architecture</a>
+      <a href="/evaluation">Evaluation</a>
     </nav>
   </header>
   <main>{body}</main>
@@ -902,6 +904,278 @@ def math_playground() -> HTMLResponse:
     </section>
     """
     return page("Math Playground", body)
+
+
+@app.get("/architecture", response_class=HTMLResponse)
+def architecture() -> HTMLResponse:
+    body = """
+    <section class="panel stack" style="margin-bottom: 18px;">
+      <h2>Project Architecture</h2>
+      <p class="muted">
+        This page explains how the visual-memory bot is assembled: what enters the system,
+        which module handles it, what files are produced, and how the frontend displays the result.
+      </p>
+    </section>
+
+    <section class="lesson-grid">
+      <article class="lesson-card wide">
+        <svg class="diagram" viewBox="0 0 920 230" role="img" aria-label="System architecture pipeline">
+          <rect width="920" height="230" fill="#fbfcfe"/>
+          <defs>
+            <marker id="archArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#647085"/></marker>
+          </defs>
+          <g font-family="Arial" font-size="13">
+            <g transform="translate(25 70)">
+              <rect width="105" height="70" rx="8" fill="#dbeafe" stroke="#2563eb"/><text x="18" y="30">Webcam</text><text x="18" y="50">or video</text>
+            </g>
+            <g transform="translate(165 70)">
+              <rect width="115" height="70" rx="8" fill="#eef2f7" stroke="#94a3b8"/><text x="18" y="30">sources.py</text><text x="15" y="50">FramePacket</text>
+            </g>
+            <g transform="translate(315 70)">
+              <rect width="120" height="70" rx="8" fill="#eef2f7" stroke="#94a3b8"/><text x="18" y="30">storage.py</text><text x="15" y="50">run folder</text>
+            </g>
+            <g transform="translate(470 70)">
+              <rect width="125" height="70" rx="8" fill="#dcfce7" stroke="#16a34a"/><text x="18" y="30">detection.py</text><text x="14" y="50">YOLO boxes</text>
+            </g>
+            <g transform="translate(630 70)">
+              <rect width="120" height="70" rx="8" fill="#fef3c7" stroke="#f59e0b"/><text x="18" y="30">tracking.py</text><text x="14" y="50">track IDs</text>
+            </g>
+            <g transform="translate(785 70)">
+              <rect width="110" height="70" rx="8" fill="#fae8ff" stroke="#a855f7"/><text x="18" y="30">web.py</text><text x="14" y="50">dashboard</text>
+            </g>
+          </g>
+          <g stroke="#647085" stroke-width="3" marker-end="url(#archArrow)">
+            <line x1="130" y1="105" x2="165" y2="105"/><line x1="280" y1="105" x2="315" y2="105"/>
+            <line x1="435" y1="105" x2="470" y2="105"/><line x1="595" y1="105" x2="630" y2="105"/>
+            <line x1="750" y1="105" x2="785" y2="105"/>
+          </g>
+          <text x="30" y="185" font-size="14" fill="#172033">The project is a chain: each step writes useful evidence for the next step.</text>
+        </svg>
+        <h3>1. The Big Architecture Idea</h3>
+        <p>The app is intentionally built as a pipeline. It does not hide everything inside one giant script. Each stage produces files that can be inspected, reused, and explained.</p>
+        <div class="formula">input -> observations -> detections -> tracks -> memory -> report/frontend</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>2. Input Layer</h3>
+        <p><strong>sources.py</strong> turns live webcam frames or video-file frames into a common object called a frame packet.</p>
+        <ul>
+          <li>WebcamSource reads laptop camera frames.</li>
+          <li>VideoFileSource reads phone-recorded videos.</li>
+          <li>Each frame gets an ID, timestamp, image data, and metadata.</li>
+        </ul>
+        <div class="formula">camera/video -> FramePacket</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>3. Storage Layer</h3>
+        <p><strong>storage.py</strong> creates a run folder. A run is one scan session.</p>
+        <ul>
+          <li>frames/ stores saved images.</li>
+          <li>observations.jsonl stores frame metadata.</li>
+          <li>manifest.json stores run summary.</li>
+        </ul>
+        <div class="formula">FramePacket -> frames + observations.jsonl</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>4. Detection Layer</h3>
+        <p><strong>detection.py</strong> runs YOLO. It asks: “What objects are in this frame, and where are they?”</p>
+        <ul>
+          <li>Produces labels.</li>
+          <li>Produces confidence scores.</li>
+          <li>Produces bounding boxes.</li>
+          <li>Creates annotated frames for visual proof.</li>
+        </ul>
+        <div class="formula">frame -> DetectionRecord</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>5. Tracking Layer</h3>
+        <p><strong>tracking.py</strong> connects repeated detections over time. It asks: “Is this cup probably the same cup from the previous frames?”</p>
+        <ul>
+          <li>Uses label matching.</li>
+          <li>Uses IoU overlap.</li>
+          <li>Uses center-distance movement.</li>
+          <li>Creates IDs like cup_001.</li>
+        </ul>
+        <div class="formula">DetectionRecord list -> TrackRecord list</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>6. Memory And Query Layer</h3>
+        <p><strong>memory.py</strong> summarizes what was seen. <strong>query.py</strong> lets users ask about it.</p>
+        <ul>
+          <li>first seen</li>
+          <li>last seen</li>
+          <li>detection count</li>
+          <li>best confidence</li>
+          <li>supporting evidence frame</li>
+        </ul>
+        <div class="formula">tracks -> answer: “last saw bottle at 14.41s”</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>7. Compare And Report Layer</h3>
+        <p><strong>change.py</strong> compares two runs. <strong>report.py</strong> creates the visual HTML report.</p>
+        <ul>
+          <li>appeared objects</li>
+          <li>disappeared objects</li>
+          <li>still-present objects</li>
+          <li>moved objects</li>
+          <li>memory cards with images</li>
+        </ul>
+        <div class="formula">before + after -> change_report.json</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>8. Frontend Layer</h3>
+        <p><strong>web.py</strong> is the localhost web app. It is the presentation and interaction layer.</p>
+        <ul>
+          <li>Upload and scan a video.</li>
+          <li>Open webcam and record 3-5 seconds.</li>
+          <li>Show saved runs.</li>
+          <li>Show memory cards.</li>
+          <li>Query visual memory.</li>
+          <li>Teach basics and math through tabs.</li>
+        </ul>
+        <div class="formula">backend files -> human-friendly dashboard</div>
+      </article>
+
+      <article class="lesson-card wide">
+        <h3>9. Output Files And What They Mean</h3>
+        <div class="formula">frames = visual evidence<br>observations.jsonl = frame timeline<br>detections.jsonl = object guesses<br>tracks.jsonl = object identity over time<br>track_summary.json = readable memory<br>report.html = visual result page</div>
+        <p>If the group understands these files, they understand the whole project. The frontend is just a friendly way to view and trigger these pipeline outputs.</p>
+      </article>
+    </section>
+    """
+    return page("Architecture", body)
+
+
+@app.get("/evaluation", response_class=HTMLResponse)
+def evaluation() -> HTMLResponse:
+    body = """
+    <section class="panel stack" style="margin-bottom: 18px;">
+      <h2>Evaluation: How To Know If The AI Actually Saw Correctly</h2>
+      <p class="muted">
+        Computer vision systems can sound confident and still be wrong. This page teaches how to inspect the evidence,
+        judge detections, and explain limitations honestly.
+      </p>
+    </section>
+
+    <section class="lesson-grid">
+      <article class="lesson-card wide">
+        <svg class="diagram" viewBox="0 0 920 230" role="img" aria-label="Evaluation ladder">
+          <rect width="920" height="230" fill="#fbfcfe"/>
+          <g font-family="Arial" font-size="14">
+            <rect x="40" y="70" width="150" height="70" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+            <text x="65" y="100">Label correct</text><text x="65" y="122">Box correct</text>
+            <rect x="230" y="70" width="150" height="70" rx="8" fill="#fef3c7" stroke="#f59e0b"/>
+            <text x="250" y="100">Label wrong</text><text x="250" y="122">Box useful</text>
+            <rect x="420" y="70" width="150" height="70" rx="8" fill="#fee2e2" stroke="#ef4444"/>
+            <text x="448" y="100">False object</text><text x="448" y="122">Bad box</text>
+            <rect x="610" y="70" width="150" height="70" rx="8" fill="#e0e7ff" stroke="#6366f1"/>
+            <text x="632" y="100">Missed object</text><text x="632" y="122">No box</text>
+          </g>
+          <text x="40" y="184" font-size="14" fill="#172033">Evaluation means looking at the image evidence, not trusting the label blindly.</text>
+        </svg>
+        <h3>1. The Golden Rule</h3>
+        <p>Never judge the system only from text output. Always check the evidence image. A detection is good only when the label and the box make sense together.</p>
+      </article>
+
+      <article class="lesson-card">
+        <h3>2. Good Detection</h3>
+        <p>A good detection has:</p>
+        <ul>
+          <li>correct label</li>
+          <li>box tightly around the object</li>
+          <li>reasonable confidence</li>
+          <li>repeated detections across frames</li>
+        </ul>
+        <div class="formula">good = correct label + correct box + repeated evidence</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>3. Wrong Label But Useful Box</h3>
+        <p>Sometimes the box points to a real object, but the label is wrong. Example: a bowl might be called vase. This is still useful for debugging because the model found “something,” but guessed the category wrong.</p>
+        <div class="formula">box good, label bad -> detector classification error</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>4. False Positive</h3>
+        <p>A false positive is when the model sees an object that is not really there. These often happen with clutter, reflections, partial objects, or unusual camera angles.</p>
+        <div class="formula">model says object exists, but evidence image says no</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>5. Missed Object</h3>
+        <p>A missed object is when a real object is visible, but the model does not detect it. This can happen if the object is small, blurry, partly hidden, or outside YOLO's known classes.</p>
+        <div class="formula">object exists, but no detection record appears</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>6. Confidence Is Not Truth</h3>
+        <p>Confidence is useful, but it is not a promise. A high-confidence wrong answer can still happen. A low-confidence correct answer can also happen.</p>
+        <ul>
+          <li>0.70+ is usually stronger.</li>
+          <li>0.35-0.50 needs careful inspection.</li>
+          <li>one detection is weaker than many detections.</li>
+        </ul>
+        <div class="formula">confidence = model belief, not reality</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>7. Track Quality</h3>
+        <p>A good track follows the same object over time. A bad track may split one object into multiple IDs or merge multiple objects into one ID.</p>
+        <ul>
+          <li>Many consistent detections = stronger track.</li>
+          <li>Duplicate boxes can create duplicate tracks.</li>
+          <li>Fast camera movement can break tracks.</li>
+        </ul>
+        <div class="formula">good track = stable label + stable motion + repeated frames</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>8. Mobile Video Quality Checklist</h3>
+        <ul>
+          <li>Move slowly.</li>
+          <li>Keep the camera steady.</li>
+          <li>Use good lighting.</li>
+          <li>Show objects clearly for at least 2-3 seconds.</li>
+          <li>Avoid fast pans and motion blur.</li>
+          <li>Keep important objects large enough in the frame.</li>
+        </ul>
+        <div class="formula">better video -> better detections -> better memory</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>9. How To Evaluate A Run</h3>
+        <ol>
+          <li>Open the run page.</li>
+          <li>Check memory cards with many detections first.</li>
+          <li>Open the evidence images.</li>
+          <li>Mark labels as correct, wrong, or uncertain.</li>
+          <li>Look for duplicate tracks.</li>
+          <li>Query one or two known objects.</li>
+          <li>Explain at least one success and one failure.</li>
+        </ol>
+      </article>
+
+      <article class="lesson-card">
+        <h3>10. What To Say In A Presentation</h3>
+        <p>Good explanation sounds like this:</p>
+        <div class="formula">“The model believes it saw a cup 22 times. The best confidence is 0.71. The evidence image shows the box is correct, so this is a reliable memory.”</div>
+        <p>That is much stronger than saying, “The AI saw a cup.”</p>
+      </article>
+
+      <article class="lesson-card wide">
+        <h3>11. Evaluation Scorecard</h3>
+        <div class="formula">A = label and box correct, repeated often<br>B = label correct but box loose, or few detections<br>C = real object but wrong label<br>D = false positive or useless track<br>Missing = real object not detected</div>
+        <p>Use this simple scorecard when reviewing demo runs with your group. It makes the project feel serious because you are showing how engineers evaluate AI, not just how they run it.</p>
+      </article>
+    </section>
+    """
+    return page("Evaluation", body)
 
 
 def safe_filename(name: str) -> str:
