@@ -235,6 +235,7 @@ def page(title: str, body: str) -> HTMLResponse:
     <nav>
       <a href="/">Dashboard</a>
       <a href="/learn">Learn CV Basics</a>
+      <a href="/math">Math Playground</a>
     </nav>
   </header>
   <main>{body}</main>
@@ -662,6 +663,245 @@ def learn() -> HTMLResponse:
     </section>
     """
     return page("Learn CV Basics", body)
+
+
+@app.get("/math", response_class=HTMLResponse)
+def math_playground() -> HTMLResponse:
+    body = """
+    <section class="panel stack" style="margin-bottom: 18px;">
+      <h2>Math Playground For Visual Memory</h2>
+      <p class="muted">
+        This page explains the math used by the project in a playful way. The goal is not to memorize formulas;
+        the goal is to understand what each formula lets the bot do.
+      </p>
+    </section>
+
+    <section class="lesson-grid">
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Video timestamp timeline">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <line x1="36" y1="112" x2="324" y2="112" stroke="#172033" stroke-width="3"/>
+          <g fill="#2563eb">
+            <circle cx="56" cy="112" r="7"/><circle cx="104" cy="112" r="7"/><circle cx="152" cy="112" r="7"/>
+            <circle cx="200" cy="112" r="7"/><circle cx="248" cy="112" r="7"/><circle cx="296" cy="112" r="7"/>
+          </g>
+          <g font-size="12" fill="#172033">
+            <text x="46" y="142">0</text><text x="94" y="142">5</text><text x="139" y="142">10</text>
+            <text x="187" y="142">15</text><text x="235" y="142">20</text><text x="283" y="142">25</text>
+          </g>
+          <text x="60" y="58" font-size="14" fill="#172033">frame index</text>
+          <text x="60" y="78" font-size="13" fill="#647085">divide by FPS to get seconds</text>
+          <path d="M152 100 C164 74, 190 74, 200 100" fill="none" stroke="#ef4444" stroke-width="3"/>
+          <text x="174" y="70" font-size="12" fill="#ef4444">time jump</text>
+        </svg>
+        <h3>1. Timestamp Math: Giving Frames A Clock</h3>
+        <p>A video is a stack of frames. To make memory useful, every frame needs a time. If a video has 30 frames per second, frame 60 happened around 2 seconds in.</p>
+        <div class="formula">timestamp = source_frame_index / FPS</div>
+        <p>In the project, this lets the bot say: “I last saw the bottle at 14.41 seconds.” Without this math, it could only say “somewhere in the video.”</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="RGB pixel values">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <rect x="42" y="50" width="96" height="96" fill="rgb(55,126,230)" stroke="#172033"/>
+          <g transform="translate(180 46)">
+            <rect width="130" height="24" fill="#ef4444"/><rect y="42" width="82" height="24" fill="#22c55e"/><rect y="84" width="220" height="24" fill="#3b82f6"/>
+            <text x="0" y="39" font-size="12" fill="#172033">R = 55</text>
+            <text x="0" y="81" font-size="12" fill="#172033">G = 126</text>
+            <text x="0" y="123" font-size="12" fill="#172033">B = 230</text>
+          </g>
+          <text x="42" y="174" font-size="13" fill="#172033">one pixel is three numbers</text>
+        </svg>
+        <h3>2. RGB Math: Color As Numbers</h3>
+        <p>A pixel is not “blue” to the computer. It is numbers. In RGB, each pixel has red, green, and blue values. Bigger blue value means the pixel looks more blue.</p>
+        <div class="formula">pixel = [R, G, B]</div>
+        <p>The detector sees millions of these numbers and learns patterns from them. Color math is the first tiny brick in the whole vision tower.</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Resize scale">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <rect x="36" y="45" width="145" height="110" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+          <rect x="235" y="72" width="82" height="62" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+          <line x1="190" y1="100" x2="226" y2="100" stroke="#647085" marker-end="url(#scaleArrow)"/>
+          <defs><marker id="scaleArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill="#647085"/></marker></defs>
+          <text x="58" y="176" font-size="12" fill="#172033">large phone frame</text>
+          <text x="230" y="156" font-size="12" fill="#172033">smaller frame</text>
+          <text x="76" y="30" font-size="12" fill="#647085">keeps same shape ratio</text>
+        </svg>
+        <h3>3. Resize Math: Making Videos Manageable</h3>
+        <p>Phone videos can be huge. Resizing makes processing faster while keeping the image shape. If width shrinks by 50%, height must also shrink by 50% so objects do not stretch.</p>
+        <div class="formula">scale = target_width / original_width<br>new_height = original_height × scale</div>
+        <p>This is used in video scanning so your laptop does not struggle with very large frames.</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Camera projection math">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <circle cx="48" cy="114" r="10" fill="#ef4444"/>
+          <rect x="166" y="52" width="6" height="128" fill="#172033"/>
+          <circle cx="285" cy="80" r="14" fill="#22c55e"/>
+          <line x1="48" y1="114" x2="285" y2="80" stroke="#647085" stroke-dasharray="5 5"/>
+          <circle cx="169" cy="96" r="5" fill="#22c55e"/>
+          <text x="26" y="144" font-size="12" fill="#172033">camera</text>
+          <text x="188" y="48" font-size="12" fill="#172033">image plane</text>
+          <text x="252" y="112" font-size="12" fill="#172033">3D point</text>
+          <text x="188" y="100" font-size="12" fill="#16a34a">(u,v)</text>
+        </svg>
+        <h3>4. Projection Math: 3D World To 2D Pixel</h3>
+        <p>A 3D object point gets squeezed onto a 2D image. The farther an object is, the smaller it looks. This is why one 2D image cannot perfectly reveal true 3D depth.</p>
+        <div class="formula">u = fx × X/Z + cx<br>v = fy × Y/Z + cy</div>
+        <p>Our current app mostly avoids this because normal video has no reliable depth. But this formula is the bridge to future 3D memory.</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Bounding box geometry">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <rect x="86" y="54" width="146" height="108" fill="none" stroke="#22c55e" stroke-width="4"/>
+          <circle cx="159" cy="108" r="6" fill="#ef4444"/>
+          <line x1="86" y1="42" x2="232" y2="42" stroke="#2563eb" stroke-width="3"/>
+          <line x1="246" y1="54" x2="246" y2="162" stroke="#2563eb" stroke-width="3"/>
+          <text x="137" y="34" font-size="12" fill="#2563eb">width</text>
+          <text x="252" y="112" font-size="12" fill="#2563eb">height</text>
+          <text x="168" y="106" font-size="12" fill="#ef4444">center</text>
+          <text x="74" y="184" font-size="12" fill="#172033">box = top-left and bottom-right pixels</text>
+        </svg>
+        <h3>5. Bounding Box Math: Where Is The Object?</h3>
+        <p>YOLO gives a rectangle around each object. From that rectangle, we calculate width, height, center, and area.</p>
+        <div class="formula">width = x2 - x1<br>height = y2 - y1<br>center = (x1 + width/2, y1 + height/2)<br>area = width × height</div>
+        <p>The project stores these values in each detection record. Tracking and movement detection both depend on them.</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Confidence threshold">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <line x1="42" y1="154" x2="318" y2="154" stroke="#172033" stroke-width="2"/>
+          <line x1="122" y1="58" x2="122" y2="154" stroke="#ef4444" stroke-dasharray="5 5" stroke-width="3"/>
+          <rect x="64" y="116" width="35" height="38" fill="#fca5a5"/>
+          <rect x="145" y="86" width="35" height="68" fill="#86efac"/>
+          <rect x="226" y="45" width="35" height="109" fill="#86efac"/>
+          <text x="91" y="174" font-size="12">0.28</text>
+          <text x="146" y="174" font-size="12">0.55</text>
+          <text x="227" y="174" font-size="12">0.83</text>
+          <text x="92" y="50" font-size="12" fill="#ef4444">threshold 0.35</text>
+        </svg>
+        <h3>6. Confidence Math: Trust But Verify</h3>
+        <p>Confidence is the detector’s belief score. A threshold filters weak guesses. In this project, the default threshold is 0.35.</p>
+        <div class="formula">keep detection if confidence ≥ threshold</div>
+        <p>A 0.83 detection is more trustworthy than 0.36, but not guaranteed. The report image is the final reality check.</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Intersection over Union">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <rect x="86" y="62" width="120" height="90" fill="#3b82f6" fill-opacity=".35" stroke="#2563eb" stroke-width="3"/>
+          <rect x="148" y="92" width="120" height="90" fill="#22c55e" fill-opacity=".35" stroke="#16a34a" stroke-width="3"/>
+          <rect x="148" y="92" width="58" height="60" fill="#f59e0b" fill-opacity=".65"/>
+          <text x="120" y="48" font-size="12" fill="#2563eb">box A</text>
+          <text x="222" y="198" font-size="12" fill="#16a34a">box B</text>
+          <text x="153" y="126" font-size="12" fill="#7a4b00">overlap</text>
+        </svg>
+        <h3>7. IoU Math: Are These Boxes The Same Object?</h3>
+        <p>IoU means Intersection over Union. It compares two boxes. High IoU means they overlap a lot, so they may be the same object in nearby frames.</p>
+        <div class="formula">IoU = overlap_area / union_area</div>
+        <p>The tracker uses IoU to connect a new detection to an existing track like <strong>cup_001</strong>.</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Center distance">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <circle cx="112" cy="118" r="8" fill="#2563eb"/>
+          <circle cx="246" cy="82" r="8" fill="#ef4444"/>
+          <line x1="112" y1="118" x2="246" y2="82" stroke="#172033" stroke-width="3"/>
+          <line x1="112" y1="118" x2="246" y2="118" stroke="#94a3b8" stroke-dasharray="4 4"/>
+          <line x1="246" y1="118" x2="246" y2="82" stroke="#94a3b8" stroke-dasharray="4 4"/>
+          <text x="166" y="134" font-size="12" fill="#647085">dx</text>
+          <text x="253" y="104" font-size="12" fill="#647085">dy</text>
+          <text x="139" y="84" font-size="12" fill="#172033">distance</text>
+        </svg>
+        <h3>8. Distance Math: How Far Did It Move?</h3>
+        <p>If a box does not overlap much, the object may still be the same one if its center only moved a little. This uses the Pythagorean theorem.</p>
+        <div class="formula">distance = sqrt((x2 - x1)^2 + (y2 - y1)^2)</div>
+        <p>The project uses this in tracking and in moved-object detection between runs.</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Tracking score">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <rect x="45" y="54" width="270" height="32" rx="6" fill="#dbeafe" stroke="#2563eb"/>
+          <rect x="45" y="112" width="190" height="32" rx="6" fill="#dcfce7" stroke="#16a34a"/>
+          <rect x="45" y="170" width="230" height="32" rx="6" fill="#fef3c7" stroke="#f59e0b"/>
+          <text x="55" y="75" font-size="13">IoU overlap score</text>
+          <text x="55" y="133" font-size="13">distance bonus</text>
+          <text x="55" y="191" font-size="13">association score</text>
+        </svg>
+        <h3>9. Tracking Score: Picking The Best Match</h3>
+        <p>When a new cup appears, the tracker compares it with active cup tracks. It picks the track with the best score.</p>
+        <div class="formula">score = IoU + 0.25 × max(0, 1 - distance / max_distance)</div>
+        <p>Translation: overlap matters most, but nearby movement helps. This is a small “common sense” rule written as math.</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Average memory">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <circle cx="94" cy="132" r="7" fill="#2563eb"/>
+          <circle cx="132" cy="102" r="7" fill="#2563eb"/>
+          <circle cx="182" cy="116" r="7" fill="#2563eb"/>
+          <circle cx="230" cy="84" r="7" fill="#2563eb"/>
+          <circle cx="160" cy="109" r="11" fill="#ef4444"/>
+          <text x="174" y="106" font-size="12" fill="#ef4444">average</text>
+          <path d="M94 132 L132 102 L182 116 L230 84" stroke="#94a3b8" fill="none" stroke-dasharray="4 4"/>
+          <text x="70" y="178" font-size="12" fill="#172033">many sightings become one memory summary</text>
+        </svg>
+        <h3>10. Memory Summary Math: Compressing Many Sightings</h3>
+        <p>A track may have many detections. The summary stores useful statistics: first seen, last seen, average center, average area, and best confidence.</p>
+        <div class="formula">average_center_x = sum(center_x values) / count</div>
+        <p>This is how many frame-level sightings become one readable memory card.</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Set difference">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <circle cx="142" cy="110" r="66" fill="#3b82f6" fill-opacity=".28" stroke="#2563eb" stroke-width="3"/>
+          <circle cx="218" cy="110" r="66" fill="#22c55e" fill-opacity=".28" stroke="#16a34a" stroke-width="3"/>
+          <text x="92" y="42" font-size="13" fill="#2563eb">before</text>
+          <text x="238" y="42" font-size="13" fill="#16a34a">after</text>
+          <text x="86" y="112" font-size="12">gone</text>
+          <text x="164" y="112" font-size="12">same</text>
+          <text x="244" y="112" font-size="12">new</text>
+        </svg>
+        <h3>11. Change Math: What Appeared Or Disappeared?</h3>
+        <p>Before/after comparison uses set math. Think of each scan as a bag of labels. The overlap is what stayed. The left-only part disappeared. The right-only part appeared.</p>
+        <div class="formula">appeared = after - before<br>disappeared = before - after<br>persisted = before ∩ after</div>
+        <p>This powers the compare-runs feature.</p>
+      </article>
+
+      <article class="lesson-card">
+        <svg class="diagram" viewBox="0 0 360 220" role="img" aria-label="Fuzzy label match">
+          <rect width="360" height="220" fill="#fbfcfe"/>
+          <rect x="52" y="54" width="100" height="44" rx="8" fill="#dbeafe" stroke="#2563eb"/>
+          <rect x="208" y="54" width="100" height="44" rx="8" fill="#dcfce7" stroke="#16a34a"/>
+          <text x="86" y="82" font-size="14">phone</text>
+          <text x="226" y="82" font-size="14">cell phone</text>
+          <line x1="152" y1="76" x2="208" y2="76" stroke="#647085" stroke-width="3"/>
+          <rect x="76" y="140" width="208" height="28" rx="6" fill="#fef3c7" stroke="#f59e0b"/>
+          <text x="108" y="159" font-size="13">similar enough to match</text>
+        </svg>
+        <h3>12. Query Matching Math: Understanding Similar Words</h3>
+        <p>The detector may say “cell phone,” while a user types “phone.” The query system normalizes aliases and uses a similarity score for fallback matches.</p>
+        <div class="formula">match if similarity(query, label) ≥ 0.55</div>
+        <p>This makes simple memory questions more forgiving without needing a full chatbot yet.</p>
+      </article>
+
+      <article class="lesson-card wide">
+        <h3>13. The Whole Math Story</h3>
+        <p>Every formula has a job. None of the math is decoration.</p>
+        <div class="formula">time tells when -> boxes tell where -> confidence tells trust -> IoU/distance tells identity -> averages summarize memory -> sets detect change</div>
+        <p>That chain is the reason the project can go from a raw phone video to a sentence like: “I last saw bottle_001 at 14.41 seconds, and here is the evidence image.”</p>
+      </article>
+    </section>
+    """
+    return page("Math Playground", body)
 
 
 def safe_filename(name: str) -> str:
