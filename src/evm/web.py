@@ -238,6 +238,7 @@ def page(title: str, body: str) -> HTMLResponse:
       <a href="/math">Math Playground</a>
       <a href="/architecture">Architecture</a>
       <a href="/evaluation">Evaluation</a>
+      <a href="/misc">Misc Glossary</a>
     </nav>
   </header>
   <main>{body}</main>
@@ -1176,6 +1177,137 @@ def evaluation() -> HTMLResponse:
     </section>
     """
     return page("Evaluation", body)
+
+
+@app.get("/misc", response_class=HTMLResponse)
+def misc() -> HTMLResponse:
+    body = """
+    <section class="panel stack" style="margin-bottom: 18px;">
+      <h2>Misc Glossary</h2>
+      <p class="muted">
+        These are the words that show up around the project but may not be obvious at first.
+        Each card explains the term in simple language and includes a useful link to learn more.
+      </p>
+    </section>
+
+    <section class="lesson-grid">
+      <article class="lesson-card">
+        <h3>YOLO</h3>
+        <p>YOLO means “You Only Look Once.” It is an object-detection model family. In our project, YOLO looks at a frame and predicts labels like cup, chair, bottle, or person, plus boxes around those objects.</p>
+        <div class="formula">image -> YOLO -> labels + boxes + confidence</div>
+        <p><a href="https://docs.ultralytics.com/" target="_blank">Learn more: Ultralytics YOLO docs</a></p>
+      </article>
+
+      <article class="lesson-card">
+        <h3>Ultralytics</h3>
+        <p>Ultralytics is the Python package we use to run YOLO easily. Instead of training a detector from scratch, we load a pretrained YOLO model and run it on frames.</p>
+        <div class="formula">Ultralytics = convenient YOLO toolkit</div>
+        <p><a href="https://docs.ultralytics.com/quickstart/" target="_blank">Learn more: Ultralytics quickstart</a></p>
+      </article>
+
+      <article class="lesson-card">
+        <h3>OpenCV</h3>
+        <p>OpenCV is a computer-vision library. We use it to read webcam frames, read video files, save images, draw boxes, and replay frames.</p>
+        <div class="formula">OpenCV = practical image/video toolbox</div>
+        <p><a href="https://docs.opencv.org/4.x/" target="_blank">Learn more: OpenCV docs</a></p>
+      </article>
+
+      <article class="lesson-card">
+        <h3>FastAPI</h3>
+        <p>FastAPI is the web framework behind the localhost frontend. It serves the dashboard, handles video upload, and connects browser actions to the Python pipeline.</p>
+        <div class="formula">browser button -> FastAPI route -> Python pipeline</div>
+        <p><a href="https://fastapi.tiangolo.com/" target="_blank">Learn more: FastAPI docs</a></p>
+      </article>
+
+      <article class="lesson-card">
+        <h3>Uvicorn</h3>
+        <p>Uvicorn is the local server that runs the FastAPI app. When you open localhost, Uvicorn is the process answering the browser.</p>
+        <div class="formula">uvicorn evm.web:app -> localhost website</div>
+        <p><a href="https://www.uvicorn.org/" target="_blank">Learn more: Uvicorn docs</a></p>
+      </article>
+
+      <article class="lesson-card">
+        <h3>Frame</h3>
+        <p>A frame is one still image from a video. A 20-second video is really many frames shown quickly one after another.</p>
+        <div class="formula">video = frame 1 + frame 2 + frame 3 + ...</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>FPS</h3>
+        <p>FPS means frames per second. If a video is 30 FPS, it shows 30 images every second. We use FPS to calculate timestamps.</p>
+        <div class="formula">timestamp = frame_index / FPS</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>Bounding Box</h3>
+        <p>A bounding box is a rectangle around an object. YOLO does not just say “cup”; it also gives the rectangle where it thinks the cup is.</p>
+        <div class="formula">box = [x1, y1, x2, y2]</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>Confidence</h3>
+        <p>Confidence is the model's belief score. A confidence of 0.80 means the model is more confident than 0.40, but confidence is not proof. Always inspect the image.</p>
+        <div class="formula">higher confidence = stronger model belief, not guaranteed truth</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>IoU</h3>
+        <p>IoU means Intersection over Union. It measures how much two boxes overlap. We use it to decide whether two detections are probably the same object over time.</p>
+        <div class="formula">IoU = overlap_area / union_area</div>
+        <p><a href="https://en.wikipedia.org/wiki/Jaccard_index" target="_blank">Learn more: Jaccard index / IoU idea</a></p>
+      </article>
+
+      <article class="lesson-card">
+        <h3>Track</h3>
+        <p>A track is an object identity over time. If the system sees a cup across many frames, it groups those sightings into one track like cup_001.</p>
+        <div class="formula">many cup detections -> cup_001</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>JSONL</h3>
+        <p>JSONL means JSON Lines. It stores one JSON object per line. We use it because long runs can have many frames and detections, and JSONL is easy to append and read.</p>
+        <div class="formula">one line = one observation or detection</div>
+        <p><a href="https://jsonlines.org/" target="_blank">Learn more: JSON Lines</a></p>
+      </article>
+
+      <article class="lesson-card">
+        <h3>Pretrained Model</h3>
+        <p>A pretrained model has already learned from a large dataset. We use pretrained YOLO so the project can detect common objects immediately without collecting our own training dataset.</p>
+        <div class="formula">pretrained = learned before we use it</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>Inference</h3>
+        <p>Inference means using a trained model to make predictions. In this project, inference happens when YOLO reads a frame and predicts objects.</p>
+        <div class="formula">trained model + new image -> prediction</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>False Positive</h3>
+        <p>A false positive is when the model says an object exists but the evidence image shows it does not. These are normal in real computer vision systems.</p>
+        <div class="formula">model says yes, reality says no</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>False Negative</h3>
+        <p>A false negative is when an object is really visible but the model misses it. Small, blurry, or hidden objects are often missed.</p>
+        <div class="formula">reality says yes, model says no</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>Embedding</h3>
+        <p>An embedding turns an image or object into a vector of numbers. We do not use advanced embeddings heavily yet, but they are a future way to tell whether two object crops look similar.</p>
+        <div class="formula">image crop -> vector of numbers</div>
+      </article>
+
+      <article class="lesson-card">
+        <h3>Localhost</h3>
+        <p>Localhost means the app is running on your own computer, not on the public internet. The browser talks to the Python server on the same machine.</p>
+        <div class="formula">127.0.0.1 = this computer</div>
+      </article>
+    </section>
+    """
+    return page("Misc Glossary", body)
 
 
 def safe_filename(name: str) -> str:
