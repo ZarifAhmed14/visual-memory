@@ -11,8 +11,9 @@ from evm.change import ChangeItem, compare_track_summaries
 from evm.detection import YoloObjectDetector, draw_detections, frame_path_for
 from evm.memory import summarize_detections
 from evm.query import find_best_track
+from evm.report import build_run_report
 from evm.detection import DetectionRecord
-from evm.sources import WebcamSource
+from evm.sources import VideoFileSource, WebcamSource
 from evm.storage import RunWriter, read_observations
 from evm.tracking import TrackRecord, summarize_tracks, track_detections
 
@@ -70,6 +71,37 @@ def capture_webcam(args: argparse.Namespace) -> None:
     finally:
         source.close()
         cv2.destroyAllWindows()
+
+    print(f"Saved run: {run_dir}")
+
+
+def ingest_video(args: argparse.Namespace) -> None:
+    run_dir = DEFAULT_RUNS_DIR / args.run_name
+    if run_dir.exists() and any(run_dir.iterdir()):
+        raise SystemExit(f"Run already exists and is not empty: {run_dir}")
+
+    source = VideoFileSource(
+        video_path=args.video_path,
+        frame_stride=args.video_frame_stride,
+        resize_width=args.resize_width,
+    )
+    source.open()
+
+    print(f"Ingesting video to {run_dir}")
+    try:
+        with RunWriter(run_dir=run_dir, source="video") as writer:
+            while True:
+                packet = source.next()
+                if packet is None:
+                    break
+                writer.write_frame(
+                    frame_id=packet.frame_id,
+                    timestamp=packet.timestamp,
+                    frame_bgr=packet.frame_bgr,
+                    metadata=packet.metadata,
+                )
+    finally:
+        source.close()
 
     print(f"Saved run: {run_dir}")
 
@@ -297,6 +329,32 @@ def scan_webcam(args: argparse.Namespace) -> None:
     print(f"  python -m evm.cli list-memory data\\runs\\{args.run_name}")
 
 
+def scan_video(args: argparse.Namespace) -> None:
+    ingest_video(args)
+    run_dir = DEFAULT_RUNS_DIR / args.run_name
+    processed, detection_count = run_detection_for_dir(
+        run_dir=run_dir,
+        model=args.model,
+        confidence=args.confidence,
+        frame_stride=args.detection_frame_stride,
+        annotate=args.annotate,
+    )
+    track_count, summary_count = run_tracking_for_dir(
+        run_dir=run_dir,
+        iou_threshold=args.iou_threshold,
+        max_center_distance=args.max_center_distance,
+        max_frame_gap=args.max_frame_gap,
+    )
+    print("Video pipeline complete")
+    print(f"Run: {run_dir}")
+    print(f"Frames processed for detection: {processed}")
+    print(f"Detections: {detection_count}")
+    print(f"Tracked detection records: {track_count}")
+    print(f"Object tracks: {summary_count}")
+    print("Next:")
+    print(f"  python -m evm.cli list-memory data\\runs\\{args.run_name}")
+
+
 def summarize_tracks_command(args: argparse.Namespace) -> None:
     run_dir = Path(args.run_dir).resolve()
     summaries = summarize_tracks(load_tracks(run_dir))
@@ -409,6 +467,14 @@ def compare_runs(args: argparse.Namespace) -> None:
     print(f"Saved report: {output_path}")
 
 
+def report(args: argparse.Namespace) -> None:
+    run_dir = Path(args.run_dir).resolve()
+    tracks = summarize_tracks(load_tracks(run_dir))
+    output_path = Path(args.output).resolve() if args.output else run_dir / "report.html"
+    build_run_report(run_dir, tracks, output_path)
+    print(f"Saved HTML report: {output_path}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Embodied visual memory tools")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -435,6 +501,27 @@ def build_parser() -> argparse.ArgumentParser:
     scan_parser.add_argument("--max-center-distance", type=float, default=180.0)
     scan_parser.add_argument("--max-frame-gap", type=int, default=10)
     scan_parser.set_defaults(func=scan_webcam)
+
+    ingest_video_parser = subparsers.add_parser("ingest-video")
+    ingest_video_parser.add_argument("video_path")
+    ingest_video_parser.add_argument("--run-name", default="video_scan")
+    ingest_video_parser.add_argument("--video-frame-stride", type=int, default=5)
+    ingest_video_parser.add_argument("--resize-width", type=int, default=1280)
+    ingest_video_parser.set_defaults(func=ingest_video)
+
+    scan_video_parser = subparsers.add_parser("scan-video")
+    scan_video_parser.add_argument("video_path")
+    scan_video_parser.add_argument("--run-name", default="video_scan")
+    scan_video_parser.add_argument("--video-frame-stride", type=int, default=5)
+    scan_video_parser.add_argument("--resize-width", type=int, default=1280)
+    scan_video_parser.add_argument("--model", default="yolov8n.pt")
+    scan_video_parser.add_argument("--confidence", type=float, default=0.35)
+    scan_video_parser.add_argument("--detection-frame-stride", type=int, default=1)
+    scan_video_parser.add_argument("--annotate", action=argparse.BooleanOptionalAction, default=True)
+    scan_video_parser.add_argument("--iou-threshold", type=float, default=0.25)
+    scan_video_parser.add_argument("--max-center-distance", type=float, default=180.0)
+    scan_video_parser.add_argument("--max-frame-gap", type=int, default=10)
+    scan_video_parser.set_defaults(func=scan_video)
 
     replay_parser = subparsers.add_parser("replay")
     replay_parser.add_argument("run_dir")
@@ -486,6 +573,11 @@ def build_parser() -> argparse.ArgumentParser:
     compare_parser.add_argument("--max-frame-gap", type=int, default=10)
     compare_parser.add_argument("--output", default=None)
     compare_parser.set_defaults(func=compare_runs)
+
+    report_parser = subparsers.add_parser("report")
+    report_parser.add_argument("run_dir")
+    report_parser.add_argument("--output", default=None)
+    report_parser.set_defaults(func=report)
 
     return parser
 

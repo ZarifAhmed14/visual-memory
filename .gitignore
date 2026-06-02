@@ -3,5 +3,7 @@ __pycache__/
 *.pyc
 data/runs/*
 !data/runs/.gitkeep
+data/videos/*
+!data/videos/.gitkeep
 *.pt
 *.egg-info/

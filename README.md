@@ -121,3 +121,51 @@ Then query it:
 python -m evm.cli list-memory data\runs\desk_scan
 python -m evm.cli query-memory data\runs\desk_scan bottle
 ```
+
+## Step 7: Recorded Video Scan
+
+Process a recorded phone video:
+
+```powershell
+python -m evm.cli scan-video data\videos\room_walkthrough.mp4 --run-name phone_room_scan
+```
+
+This creates the same run outputs as webcam scanning: frames, observations, detections, annotations, tracks, and summaries.
+
+## Step 8: HTML Visual Report
+
+Create a browsable report for a scanned run:
+
+```powershell
+python -m evm.cli report data\runs\phone_room_scan
+```
+
+Open:
+
+```text
+data\runs\phone_room_scan\report.html
+```
+
+## Local Frontend
+
+Run the localhost dashboard:
+
+```powershell
+python -m uvicorn evm.web:app --host 127.0.0.1 --port 8000
+```
+
+Open:
+
+```text
+http://127.0.0.1:8000
+```
+
+The dashboard can:
+
+- show saved runs
+- display tracked memory cards with evidence images
+- query what the system last saw
+- open the generated HTML report
+- scan a phone video from a local file path
+- upload a video from the user's PC
+- open the webcam, record a 3-5 second clip, and scan it
